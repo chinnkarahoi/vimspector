@@ -40,6 +40,7 @@ USER_CHOICES = {}
 
 
 class DebugSession( object ):
+  global_filetype = ''
   def __init__( self, api_prefix ):
     self._logger = logging.getLogger( __name__ )
     utils.SetUpLogging( self._logger )
@@ -85,6 +86,9 @@ class DebugSession( object ):
 
     current_file = utils.GetBufferFilepath( vim.current.buffer )
     filetypes = utils.GetBufferFiletypes( vim.current.buffer )
+    if len(filetypes) > 0:
+      self._debug_filetype = filetypes[0]
+      DebugSession.global_filetype = filetypes[0]
     configurations = {}
     adapters = {}
 
@@ -471,7 +475,8 @@ class DebugSession( object ):
       vim.command( 'enew' )
       self._stackTraceView = stack_trace.StackTraceView( self,
                                                          self._connection,
-                                                         vim.current.buffer )
+                                                         vim.current.buffer,
+                                                         self._debug_filetype )
 
     with utils.TemporaryVimOptions( { 'splitbelow':  False,
                                       'eadirection': 'ver',
@@ -488,7 +493,8 @@ class DebugSession( object ):
 
       self._variablesView = variables.VariablesView( self._connection,
                                                      vars_win,
-                                                     watch_win )
+                                                     watch_win,
+                                                     self._debug_filetype )
 
 
     with utils.TemporaryVimOption( 'splitbelow', True ):
@@ -499,7 +505,8 @@ class DebugSession( object ):
       vim.command( 'enew' )
       self._outputView = output.OutputView( self._connection,
                                             vim.current.window,
-                                            self._api_prefix )
+                                            self._api_prefix,
+                                            self._debug_filetype )
 
   def ClearCurrentFrame( self ):
     self.SetCurrentFrame( None )

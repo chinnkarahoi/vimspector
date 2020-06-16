@@ -40,11 +40,12 @@ def CategoryToBuffer( category ):
 
 
 class OutputView( object ):
-  def __init__( self, connection, window, api_prefix ):
+  def __init__( self, connection, window, api_prefix, filetype ):
     self._window = window
     self._connection = connection
     self._buffers = {}
     self._api_prefix = api_prefix
+    self._debug_filetype = filetype
 
     for b in set( BUFFER_MAP.values() ):
       self._CreateBuffer( b )
@@ -183,7 +184,8 @@ class OutputView( object ):
                                      'vimspector.Console',
                                      '> ',
                                      'vimspector#EvaluateConsole',
-                                     hidden=True )
+                                     hidden=True,
+                                     filetype=self._debug_filetype )
           else:
             utils.SetUpHiddenBuffer(
               tab_buffer.buf,

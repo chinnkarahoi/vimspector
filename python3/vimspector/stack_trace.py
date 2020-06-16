@@ -21,7 +21,7 @@ from vimspector import utils
 
 
 class StackTraceView( object ):
-  def __init__( self, session, connection, buf ):
+  def __init__( self, session, connection, buf, filetype ):
     self._logger = logging.getLogger( __name__ )
     utils.SetUpLogging( self._logger )
 
@@ -36,7 +36,7 @@ class StackTraceView( object ):
     self._threads = []
     self._sources = {}
 
-    utils.SetUpScratchBuffer( self._buf, 'vimspector.StackTrace' )
+    utils.SetUpScratchBuffer( self._buf, 'vimspector.StackTrace', filetype )
 
     vim.current.buffer = self._buf
     # FIXME: Remove all usage of "Windown" and just use buffers to prevent all

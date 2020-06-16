@@ -24,7 +24,7 @@ View = namedtuple( 'View', [ 'win', 'lines', 'draw' ] )
 
 
 class VariablesView( object ):
-  def __init__( self, connection, variables_win, watches_win ):
+  def __init__( self, connection, variables_win, watches_win, filetype ):
     self._logger = logging.getLogger( __name__ )
     utils.SetUpLogging( self._logger )
 
@@ -66,11 +66,12 @@ class VariablesView( object ):
       vim.command( 'nnoremenu 1.3 WinBar.Delete '
                    ':call vimspector#DeleteWatch()<CR>' )
 
-    utils.SetUpScratchBuffer( self._vars.win.buffer, 'vimspector.Variables' )
+    utils.SetUpScratchBuffer( self._vars.win.buffer, 'vimspector.Variables' ,  filetype )
     utils.SetUpPromptBuffer( self._watch.win.buffer,
                              'vimspector.Watches',
                              'Expression: ',
-                             'vimspector#AddWatchPrompt' )
+                             'vimspector#AddWatchPrompt',
+                             filetype=filetype )
 
     utils.SetUpUIWindow( self._vars.win )
     utils.SetUpUIWindow( self._watch.win )

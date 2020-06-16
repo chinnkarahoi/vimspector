@@ -86,7 +86,7 @@ def CleanUpCommand( name, api_prefix ):
     name ) )
 
 
-def SetUpScratchBuffer( buf, name ):
+def SetUpScratchBuffer( buf, name , filetype = '' ):
   buf.options[ 'buftype' ] = 'nofile'
   buf.options[ 'swapfile' ] = False
   buf.options[ 'modifiable' ] = False
@@ -94,6 +94,7 @@ def SetUpScratchBuffer( buf, name ):
   buf.options[ 'readonly' ] = True
   buf.options[ 'buflisted' ] = False
   buf.options[ 'bufhidden' ] = 'wipe'
+  buf.options[ 'filetype' ] = filetype
   buf.name = name
 
 
@@ -108,7 +109,7 @@ def SetUpHiddenBuffer( buf, name ):
   buf.name = name
 
 
-def SetUpPromptBuffer( buf, name, prompt, callback, hidden=False ):
+def SetUpPromptBuffer( buf, name, prompt, callback, hidden=False, filetype = '' ):
   # This feature is _super_ new, so only enable when available
   if not Exists( '*prompt_setprompt' ):
     return SetUpHiddenBuffer( buf, name )
@@ -120,6 +121,7 @@ def SetUpPromptBuffer( buf, name, prompt, callback, hidden=False ):
   buf.options[ 'readonly' ] = False
   buf.options[ 'buflisted' ] = False
   buf.options[ 'bufhidden' ] = 'wipe' if not hidden else 'hide'
+  buf.options[ 'filetype' ] = filetype
   buf.name = name
 
   vim.eval( "prompt_setprompt( {0}, '{1}' )".format( buf.number,
