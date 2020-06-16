@@ -98,7 +98,7 @@ def SetUpScratchBuffer( buf, name , filetype = '' ):
   buf.name = name
 
 
-def SetUpHiddenBuffer( buf, name ):
+def SetUpHiddenBuffer( buf, name, filetype='' ):
   buf.options[ 'buftype' ] = 'nofile'
   buf.options[ 'swapfile' ] = False
   buf.options[ 'modifiable' ] = False
@@ -106,6 +106,7 @@ def SetUpHiddenBuffer( buf, name ):
   buf.options[ 'readonly' ] = True
   buf.options[ 'buflisted' ] = False
   buf.options[ 'bufhidden' ] = 'hide'
+  buf.options[ 'filetype' ] = filetype
   buf.name = name
 
 

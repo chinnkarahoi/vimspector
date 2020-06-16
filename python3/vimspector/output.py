@@ -189,7 +189,8 @@ class OutputView( object ):
           else:
             utils.SetUpHiddenBuffer(
               tab_buffer.buf,
-              'vimspector.Output:{0}'.format( category ) )
+              'vimspector.Output:{0}'.format( category ),
+              filetype=self._debug_filetype )
 
           self._RenderWinBar( category )
 
