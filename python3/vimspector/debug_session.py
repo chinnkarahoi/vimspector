@@ -21,6 +21,7 @@ import shlex
 import subprocess
 import functools
 import vim
+from vimspector import global_filetype
 
 from vimspector import ( breakpoints,
                          code,
@@ -85,6 +86,7 @@ class DebugSession( object ):
 
     current_file = utils.GetBufferFilepath( vim.current.buffer )
     filetypes = utils.GetBufferFiletypes( vim.current.buffer )
+    global_filetype.GLOBAL_FILETYPE = '.'.join(utils.GetBufferFiletypes( vim.current.buffer ))
     configurations = {}
     adapters = {}
 

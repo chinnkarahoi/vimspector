@@ -23,6 +23,7 @@ import string
 import functools
 import subprocess
 import shlex
+from vimspector import global_filetype
 
 
 
@@ -101,6 +102,7 @@ def SetUpScratchBuffer( buf, name ):
 
 
 def SetUpHiddenBuffer( buf, name ):
+  buf.options[ 'filetype' ] = global_filetype.GLOBAL_FILETYPE
   buf.options[ 'buftype' ] = 'nofile'
   buf.options[ 'swapfile' ] = False
   buf.options[ 'modifiable' ] = False
@@ -116,6 +118,7 @@ def SetUpPromptBuffer( buf, name, prompt, callback ):
   if not Exists( '*prompt_setprompt' ):
     return SetUpHiddenBuffer( buf, name )
 
+  buf.options[ 'filetype' ] = global_filetype.GLOBAL_FILETYPE
   buf.options[ 'buftype' ] = 'prompt'
   buf.options[ 'swapfile' ] = False
   buf.options[ 'modifiable' ] = True
