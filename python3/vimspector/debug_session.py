@@ -526,8 +526,10 @@ class DebugSession( object ):
       return False
 
     if frame:
-      self._variablesView.SetSyntax( self._codeView.current_syntax )
-      self._stackTraceView.SetSyntax( self._codeView.current_syntax )
+      # self._variablesView.SetSyntax( self._codeView.current_syntax )
+      self._variablesView.SetFiletype( self._codeView.filetype )
+      # self._stackTraceView.SetSyntax( self._codeView.current_syntax )
+      self._stackTraceView.SetFiletype( self._codeView.filetype )
       self._variablesView.LoadScopes( frame )
       self._variablesView.EvaluateWatches()
 

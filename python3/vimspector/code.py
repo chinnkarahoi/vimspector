@@ -111,6 +111,7 @@ class CodeView( object ):
 
     self.current_syntax = utils.ToUnicode(
       vim.current.buffer.options[ 'syntax' ] )
+    self.filetype = '.'.join(utils.GetBufferFiletypes( vim.current.buffer ))
 
     return True
 

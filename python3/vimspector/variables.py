@@ -493,10 +493,17 @@ class VariablesView( object ):
     return '...'
 
 
-  def SetSyntax( self, syntax ):
+  def SetSyntax( self, syntax):
     self._current_syntax = utils.SetSyntax( self._current_syntax,
                                             syntax,
                                             self._vars.buf,
                                             self._watch.buf )
 
+  def SetFiletype( self, filetype ):
+    if not hasattr(self, '_current_filetype'):
+      self._current_filetype = ''
+    self._current_filetype = utils.SetFiletype( self._current_filetype,
+                                            filetype,
+                                            self._vars.buf,
+                                            self._watch.buf )
 # vim: sw=2

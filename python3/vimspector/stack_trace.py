@@ -309,3 +309,11 @@ class StackTraceView( object ):
     self._current_syntax = utils.SetSyntax( self._current_syntax,
                                             syntax,
                                             self._buf )
+
+
+  def SetFiletype( self, filetype ):
+    if not hasattr(self, '_current_filetype'):
+      self._current_filetype = ''
+    self._current_filetype = utils.SetFiletype( self._current_filetype,
+                                            filetype,
+                                            self._buf )

@@ -576,6 +576,23 @@ def SetSyntax( current_syntax, syntax, *args ):
   return syntax
 
 
+def SetFiletype( current_filetype, filetype, *args ):
+  if not filetype:
+    filetype = ''
+
+  if current_filetype == filetype:
+    return
+
+  for buf in args:
+    with LetCurrentBuffer( buf ):
+      # We use set syn= because just setting vim.Buffer.options[ 'filetype' ]
+      # doesn't actually trigger the filetype autocommand, and i'm not sure that
+      # 'doautocmd filetype' is the right solution or not
+      vim.command( 'set filetype={}'.format( Escape( filetype ) ) )
+
+  return filetype
+
+
 def GetBufferFiletypes( buf ):
   ft = ToUnicode( vim.eval( f"getbufvar( {buf.number}, '&ft' )" ) )
   return ft.split( '.' )
