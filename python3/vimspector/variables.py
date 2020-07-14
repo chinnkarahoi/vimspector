@@ -151,12 +151,12 @@ class VariablesView( object ):
       vim.command(
         'nnoremap <buffer> <DEL> :call vimspector#DeleteWatch()<CR>' )
 
-      vim.command( 'nnoremenu 1.1 WinBar.New '
-                   ':call vimspector#AddWatch()<CR>' )
-      vim.command( 'nnoremenu 1.2 WinBar.Expand/Collapse '
-                   ':call vimspector#ExpandVariable()<CR>' )
-      vim.command( 'nnoremenu 1.3 WinBar.Delete '
-                   ':call vimspector#DeleteWatch()<CR>' )
+      # vim.command( 'nnoremenu 1.1 WinBar.New '
+      #              ':call vimspector#AddWatch()<CR>' )
+      # vim.command( 'nnoremenu 1.2 WinBar.Expand/Collapse '
+      #              ':call vimspector#ExpandVariable()<CR>' )
+      # vim.command( 'nnoremenu 1.3 WinBar.Delete '
+      #              ':call vimspector#DeleteWatch()<CR>' )
 
     # Set the (global!) balloon expr if supported
     has_balloon      = int( vim.eval( "has( 'balloon_eval' )" ) )

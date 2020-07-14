@@ -211,11 +211,11 @@ class OutputView( object ):
       if 'E329' not in str( e ):
         raise
 
-    vim.command( "nnoremenu  1.{0} WinBar.{1}{2} "
-                 ":call vimspector#ShowOutput( '{1}' )<CR>".format(
-                   tab_buffer.index,
-                   utils.Escape( category ),
-                   '*' if tab_buffer.flag else '' ) )
+    # vim.command( "nnoremenu  1.{0} WinBar.{1}{2} "
+    #              ":call vimspector#ShowOutput( '{1}' )<CR>".format(
+    #                tab_buffer.index,
+    #                utils.Escape( category ),
+    #                '*' if tab_buffer.flag else '' ) )
 
   def GetCategories( self ):
     return list( self._buffers.keys() )
