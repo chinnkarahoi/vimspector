@@ -172,25 +172,34 @@ def RestoreCursorPosition():
 
 @contextlib.contextmanager
 def RestoreCurrentWindow():
-  # TODO: Don't trigger autocommands when shifting windows
-  old_tabpage = vim.current.tabpage
-  old_window = vim.current.window
   try:
-    yield
+    saved_eventignore = vim.options[ 'eventignore' ]
+    vim.options[ 'eventignore' ] = 'BufWinEnter,BufWinLeave,WinEnter,WinLeave,BufEnter,BufLeave,TabEnter,TabLeave'
+    old_tabpage = vim.current.tabpage
+    old_window = vim.current.window
+    try:
+      yield
+    finally:
+      vim.current.tabpage = old_tabpage
+      vim.current.window = old_window
   finally:
-    vim.current.tabpage = old_tabpage
-    vim.current.window = old_window
+    vim.options[ 'eventignore' ] = saved_eventignore
 
 
 @contextlib.contextmanager
 def RestoreCurrentBuffer( window ):
-  old_buffer = window.buffer
   try:
-    yield
+    saved_eventignore = vim.options[ 'eventignore' ]
+    vim.options[ 'eventignore' ] = 'BufWinEnter,BufWinLeave,WinEnter,WinLeave,BufEnter,BufLeave,TabEnter,TabLeave'
+    old_buffer = window.buffer
+    try:
+      yield
+    finally:
+      with RestoreCurrentWindow():
+        vim.current.window = window
+        vim.current.buffer = old_buffer
   finally:
-    with RestoreCurrentWindow():
-      vim.current.window = window
-      vim.current.buffer = old_buffer
+    vim.options[ 'eventignore' ] = saved_eventignore
 
 
 @contextlib.contextmanager
