@@ -600,7 +600,7 @@ def SetFiletype( current_filetype, filetype, *args ):
       # We use set syn= because just setting vim.Buffer.options[ 'filetype' ]
       # doesn't actually trigger the filetype autocommand, and i'm not sure that
       # 'doautocmd filetype' is the right solution or not
-      vim.command( 'set filetype={}'.format( Escape( filetype ) ) )
+      vim.command( 'silent! set filetype={}'.format( Escape( filetype ) ) )
 
   return filetype
 
