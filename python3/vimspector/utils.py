@@ -53,6 +53,14 @@ def BufferForFile( file_name ):
   return vim.buffers[ BufferNumberForFile( file_name ) ]
 
 
+def WindowForBuffer( buf ):
+  for w in vim.current.tabpage.windows:
+    if w.buffer == buf:
+      return w
+
+  return None
+
+
 def OpenFileInCurrentWindow( file_name ):
   buffer_number = BufferNumberForFile( file_name )
   try:
@@ -139,6 +147,7 @@ def SetUpPromptBuffer( buf, name, prompt, callback ):
 def SetUpUIWindow( win ):
   win.options[ 'wrap' ] = False
   win.options[ 'number' ] = False
+  win.options[ 'relativenumber' ] = False
   win.options[ 'signcolumn' ] = 'no'
   win.options[ 'spell' ] = False
   win.options[ 'list' ] = False
@@ -200,6 +209,18 @@ def RestoreCurrentBuffer( window ):
         vim.current.buffer = old_buffer
   finally:
     vim.options[ 'eventignore' ] = saved_eventignore
+
+
+@contextlib.contextmanager
+def AnyWindowForBuffer( buf ):
+  # Only checks the current tab page, which is what we want
+  current_win = WindowForBuffer( buf )
+  if current_win is not None:
+    with LetCurrentWindow( current_win ):
+      yield
+  else:
+    with LetCurrentBuffer( buf ):
+      yield
 
 
 @contextlib.contextmanager
@@ -578,11 +599,11 @@ def SetSyntax( current_syntax, syntax, *args ):
   if current_syntax == syntax:
     return
 
+  # We use set syn= because just setting vim.Buffer.options[ 'syntax' ]
+  # doesn't actually trigger the Syntax autocommand, and i'm not sure that
+  # 'doautocmd Syntax' is the right solution or not
   for buf in args:
-    with LetCurrentBuffer( buf ):
-      # We use set syn= because just setting vim.Buffer.options[ 'syntax' ]
-      # doesn't actually trigger the Syntax autocommand, and i'm not sure that
-      # 'doautocmd Syntax' is the right solution or not
+    with AnyWindowForBuffer( buf ):
       vim.command( 'set syntax={}'.format( Escape( syntax ) ) )
 
   return syntax
