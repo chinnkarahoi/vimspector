@@ -20,6 +20,7 @@ from collections import defaultdict
 
 from vimspector import utils
 
+from vimspector import global_filetype
 
 class CodeView( object ):
   def __init__( self, window, api_prefix ):
@@ -259,5 +260,7 @@ class CodeView( object ):
     else:
       self._terminal_window = terminal_window
       self._terminal_buffer_number = buffer_number
+      # vim.command( 'silent! call setbufvar({}, "&filetype", "{}")'
+      #    .format( buffer_number, global_filetype.GLOBAL_FILETYPE  ) )
 
     return buffer_number
