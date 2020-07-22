@@ -189,8 +189,10 @@ def RestoreCurrentWindow():
     try:
       yield
     finally:
-      vim.current.tabpage = old_tabpage
-      vim.current.window = old_window
+      if old_tabpage.valid:
+        vim.current.tabpage = old_tabpage
+      if old_window.valid:
+        vim.current.window = old_window
   finally:
     vim.options[ 'eventignore' ] = saved_eventignore
 
@@ -204,9 +206,10 @@ def RestoreCurrentBuffer( window ):
     try:
       yield
     finally:
-      with RestoreCurrentWindow():
-        vim.current.window = window
-        vim.current.buffer = old_buffer
+      if window.valid:
+        with RestoreCurrentWindow():
+          vim.current.window = window
+          vim.current.buffer = old_buffer
   finally:
     vim.options[ 'eventignore' ] = saved_eventignore
 
@@ -221,6 +224,13 @@ def AnyWindowForBuffer( buf ):
   else:
     with LetCurrentBuffer( buf ):
       yield
+
+
+@contextlib.contextmanager
+def LetCurrentTabpage( tabpage ):
+  with RestoreCurrentWindow():
+    vim.current.tabpage = tabpage
+    yield
 
 
 @contextlib.contextmanager
@@ -341,7 +351,7 @@ def AskForInput( prompt, default_value = None ):
       return vim.eval( "input( '{}' {} )".format( Escape( prompt ),
                                                   default_option ) )
     except KeyboardInterrupt:
-      return ''
+      return None
 
 
 def AppendToBuffer( buf, line_or_lines, modified=False ):
@@ -449,6 +459,10 @@ def ExpandReferencesInString( orig_s,
         default_value = user_choices.get( key, None )
         mapping[ key ] = AskForInput( 'Enter value for {}: '.format( key ),
                                       default_value )
+
+        if mapping[ key ] is None:
+          raise KeyboardInterrupt
+
         user_choices[ key ] = mapping[ key ]
         _logger.debug( "Value for %s not set in %s (from %s): set to %s",
                        key,
@@ -668,3 +682,7 @@ def GetUnusedLocalPort():
   port = sock.getsockname()[ 1 ]
   sock.close()
   return port
+
+
+def WindowID( window, tab ):
+  return int( Call( 'win_getid', window.number, tab.number ) )

@@ -102,6 +102,17 @@ class OutputView( object ):
     # FIXME: nunmenu the WinBar ?
     self._buffers = {}
 
+  def WindowIsValid( self ):
+    return self._window.valid
+
+  def UseWindow( self, win ):
+    assert not self._window.valid
+    self._window = win
+    # TODO: Sorting of the WinBar ?
+    for category, _ in self._buffers.items():
+      self._RenderWinBar( category )
+
+
   def _ShowOutput( self, category ):
     if not self._window.valid:
       return
@@ -115,20 +126,13 @@ class OutputView( object ):
     self._ShowOutput( category )
 
   def Evaluate( self, frame, expression ):
-    console = self._buffers[ 'Console' ].buf
-    with utils.ModifiableScratchBuffer( console ):
-      utils.AppendToBuffer( console, 'Evaluating: ' + expression )
+    self._Print( 'Console', [ 'Evaluating: ' + expression ] )
 
     def print_result( message ):
-      with utils.ModifiableScratchBuffer( console ):
-        utils.AppendToBuffer( console,
-                              'Evaluated: ' + expression )
-
-        result = message[ 'body' ][ 'result' ]
-        if result is None:
-          result = 'null'
-
-        utils.AppendToBuffer( console, '  Result: ' + result )
+      result = message[ 'body' ][ 'result' ]
+      if result is None:
+        result = '<no result>'
+      self._Print( 'Console', f'  Result: { result }' )
 
     request = {
       'command': 'evaluate',
@@ -157,11 +161,13 @@ class OutputView( object ):
 
 
   def _CreateBuffer( self, category, file_name = None, cmd = None ):
-    if not self._window.valid:
-      return
+    win = self._window
+    if not win.valid:
+      # We need to borrow the current window
+      win = vim.current.window
 
-    with utils.LetCurrentWindow( self._window ):
-      with utils.RestoreCurrentBuffer( self._window ):
+    with utils.LetCurrentWindow( win ):
+      with utils.RestoreCurrentBuffer( win ):
 
         if file_name is not None:
           assert cmd is None

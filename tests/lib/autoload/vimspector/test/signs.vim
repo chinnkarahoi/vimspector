@@ -2,12 +2,16 @@ function! vimspector#test#signs#AssertCursorIsAtLineInBuffer( buffer,
                                                             \ line,
                                                             \ column ) abort
   call WaitForAssert( {->
-        \ assert_equal( a:buffer, bufname( '%' ), 'Current buffer' )
+        \ assert_equal( fnamemodify( a:buffer, ':p' ),
+        \               fnamemodify( bufname( '%' ), ':p' ),
+        \               'Current buffer' )
         \ }, 10000 )
   call WaitForAssert( {->
         \ assert_equal( a:line, line( '.' ), 'Current line' )
         \ }, 10000 )
-  call assert_equal( a:column, col( '.' ), 'Current column' )
+  if a:column isnot v:null
+    call assert_equal( a:column, col( '.' ), 'Current column' )
+  endif
 endfunction
 
 function! vimspector#test#signs#AssertPCIsAtLineInBuffer( buffer, line ) abort
