@@ -93,7 +93,10 @@ class Variable( Expandable ):
     self.changed = True
 
   def VariablesReference( self ):
-    return self.variable.get( 'variablesReference', 0 )
+    try:
+      return self.variable.get( 'variablesReference', 0 )
+    except Exception:
+      return 0
 
   def Update( self, variable ):
     self.changed = False
@@ -351,6 +354,10 @@ class VariablesView( object ):
   def _DrawVariables( self, view,  variables, indent ):
     assert indent > 0
     for variable in variables:
+      if not variable:
+        continue
+      if not variable.variable:
+        continue
       line = utils.AppendToBuffer(
         view.buf,
         '{indent}{marker}{icon} {name} ({type_}): {value}'.format(
@@ -440,10 +447,13 @@ class VariablesView( object ):
       # Find the variable in parent
       found = False
       for index, v in enumerate( parent.variables ):
-        if v.variable[ 'name' ] == variable_body[ 'name' ]:
-          variable = v
-          found = True
-          break
+        try:
+          if v.variable[ 'name' ] == variable_body[ 'name' ]:
+            variable = v
+            found = True
+            break
+        except Exception:
+          pass
 
       if not found:
         variable = Variable( variable_body )
