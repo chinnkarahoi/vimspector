@@ -39,9 +39,12 @@ For a tutorial and usage overview, take a look at the
     * [Stepping](#stepping)
     * [Variables and scopes](#variables-and-scopes)
     * [Watches](#watches)
+       * [Watch autocompletion](#watch-autocompletion)
     * [Stack Traces](#stack-traces)
     * [Program Output](#program-output)
        * [Console](#console)
+       * [Console autocompletion](#console-autocompletion)
+       * [Log View](#log-view)
     * [Closing debugger](#closing-debugger)
  * [Debug adapter configuration](#debug-adapter-configuration)
     * [C, C  , Rust, etc.](#c-c-rust-etc)
@@ -65,16 +68,18 @@ For a tutorial and usage overview, take a look at the
     * [Other servers](#other-servers)
  * [Customisation](#customisation)
     * [Changing the default signs](#changing-the-default-signs)
+    * [Sign priority](#sign-priority)
     * [Changing the default window sizes](#changing-the-default-window-sizes)
     * [Changing the terminal size](#changing-the-terminal-size)
     * [Advanced UI customisation](#advanced-ui-customisation)
+    * [Customising the WinBar](#customising-the-winbar)
     * [Example](#example)
  * [FAQ](#faq)
  * [Motivation](#motivation)
  * [License](#license)
  * [Sponsorship](#sponsorship)
 
-<!-- Added by: ben, at: Wed 22 Jul 2020 22:10:50 BST -->
+<!-- Added by: ben, at: Fri  4 Sep 2020 00:48:17 BST -->
 
 <!--te-->
 
@@ -106,10 +111,10 @@ And a couple of brief demos:
 - launch and attach
 - remote launch, remote attach
 - locals and globals display
-- watch expressions
+- watch expressions with autocompletion
 - call stack display and navigation
 - variable value display hover
-- interactive debug console
+- interactive debug console with autocompletion
 - launch debugee within Vim's embedded terminal
 - logging/stdout display
 - simple stable API for custom tooling (e.g. integrate with language server)
@@ -739,6 +744,22 @@ to add a new watch expression.
 
 The watches are represented by the buffer `vimspector.StackTrace`.
 
+### Watch autocompletion
+
+The watch prompt buffer  has its `omnifunc` set to a function that will
+calcualte completion for the current expression. This is trivailly used with
+`<Ctrl-x><Ctrl-o>` (see `:help ins-completion`), or integrated with your
+favourite completion system. The filetype in the buffer is set to
+`VimspectorPrompt`.
+
+For YouCompleteMe, the following config works well:
+
+```viml
+let g:ycm_semantic_triggers =  {
+  \   'VimspectorPrompt': [ '.', '->', ':', '<' ]
+}
+```
+
 ## Stack Traces
 
 * In the threads window, use `<CR>` to expand/collapse.
@@ -778,6 +799,31 @@ NOTE: See also [Watches](#watches) above.
 
 If the output window is closed, a new one can be opened with
 `:VimspectorShowOutput Console`.
+
+### Console autocompletion
+
+The console prompt buffer has its `omnifunc` set to a function that will
+calcualte completion for the current command/expression. This is trivailly used
+with `<Ctrl-x><Ctrl-o>` (see `:help ins-completion`), or integrated with your
+favourite completion system. The filetype in the buffer is set to
+`VimspectorPrompt`.
+
+For YouCompleteMe, the following config works well:
+
+```viml
+let g:ycm_semantic_triggers =  {
+  \   'VimspectorPrompt': [ '.', '->', ':', '<' ]
+}
+```
+
+### Log View
+
+The Vimspector log file contains a full trace of the communication between
+Vimspector and the debug adapter. This is the primary source of diagnostic
+information when something goes wrong that's not a Vim traceback.
+
+If you just want to see the Vimspector log file, use `:VimspectorToggleLog`,
+which will tail it in a little window (doesn't work on Windows).
 
 ## Closing debugger
 
@@ -1352,10 +1398,13 @@ Vimsector uses the following signs internally. If they are defined before
 Vimsector uses them, they will not be replaced. So to customise the signs,
 define them in your `vimrc`.
 
-* `vimspectorBP`: A breakpoint.
-* `vimspectorBPCond`: A conditional breakpoint.
-* `vimspectorBPDisabled`: A disabled breakpoint
-* `vimspectorPC` The program counter, i.e. current line.
+
+| Sign                   | Description                         | Priority |
+|------------------------|-------------------------------------|----------|
+| `vimspectorBP`         | Line breakpoint                     | 9        |
+| `vimspectorBPCond`     | Conditional line breakpiont         | 9        |
+| `vimspectorBPDisabled` | Disabled breakpoint                 | 9        |
+| `vimspectorPC`         | Program counter (i.e. current line) | 200      |
 
 The default symbols are the equivalent of something like the following:
 
@@ -1363,7 +1412,7 @@ The default symbols are the equivalent of something like the following:
 sign define vimspectorBP         text=\ ● texthl=WarningMsg
 sign define vimspectorBPCond     text=\ ◆ texthl=WarningMsg
 sign define vimspectorBPDisabled text=\ ● texthl=LineNr
-sign define vimspectorPC         text=\ ▶ texthl=MatchParen
+sign define vimspectorPC         text=\ ▶ texthl=MatchParen linehl=CursorLine
 ```
 
 If the signs don't display properly, your font probably doesn't contain these
@@ -1377,6 +1426,37 @@ sign define vimspectorBPDisabled text=!> texthl=LineNr
 sign define vimspectorPC text=->         texthl=MatchParen
 ```
 
+## Sign priority
+
+Many different plugins provide signs for various purposes. Examples include
+diagnostic signs for code errors, etc. Vim provides only a single priority to
+determine which sign should be displayed when multiple signs are placed at a
+single line. If you are finding that other signs are interfering with
+vimspector's (or vice-versa), you can customise the priority used by vimspector
+by setting the following dictionary:
+
+```viml
+let g:vimspector_sign_priority = {
+  \   '<sign-name>': <priority>,
+  \ }
+```
+
+For example:
+
+```viml
+let g:vimspector_sign_priority = {
+  \    'vimspectorBP':         3,
+  \    'vimspectorBPCond':     2,
+  \    'vimspectorBPDisabled': 1,
+  \    'vimspectorPC':         999,
+  \ }
+```
+
+All keys are optional. If a sign is not customised, the default priority it used
+(as shown above).
+
+See `:help sign-priority`. The default priority is 10, larger numbers override
+smaller ones.
 
 ## Changing the default window sizes
 

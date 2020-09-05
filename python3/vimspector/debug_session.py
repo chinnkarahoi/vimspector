@@ -56,6 +56,7 @@ class DebugSession( object ):
                        install.GetGadgetDir( VIMSPECTOR_HOME ) )
 
     self._uiTab = None
+    self._logView = None
     self._stackTraceView = None
     self._variablesView = None
     self._outputView = None
@@ -334,12 +335,15 @@ class DebugSession( object ):
       return wrapper
     return decorator
 
+  def _HasUI( self ):
+    return self._uiTab and self._uiTab.valid
+
   def RequiresUI( otherwise=None ):
     """Decorator, call fct if self._connected else echo warning"""
     def decorator( fct ):
       @functools.wraps( fct )
       def wrapper( self, *args, **kwargs ):
-        if not self._uiTab or not self._uiTab.valid:
+        if not self._HasUI():
           utils.UserMessage(
             'Vimspector is not active',
             persist=False,
@@ -494,6 +498,26 @@ class DebugSession( object ):
   def ExpandFrameOrThread( self ):
     self._stackTraceView.ExpandFrameOrThread()
 
+  def ToggleLog( self ):
+    if self._HasUI():
+      return self.ShowOutput( 'Vimspector' )
+
+    if self._logView and self._logView.WindowIsValid():
+      self._logView.Reset()
+      self._logView = None
+      return
+
+    if self._logView:
+      self._logView.Reset()
+
+    # TODO: The UI code is too scattered. Re-organise into a UI class that
+    # just deals with these thigns like window layout and custmisattion.
+    vim.command( f'botright { settings.Int( "bottombar_height" ) }new' )
+    win = vim.current.window
+    self._logView = output.OutputView( win, self._api_prefix )
+    self._logView.AddLogFileView()
+    self._logView.ShowOutput( 'Vimspector' )
+
   @RequiresUI()
   def ShowOutput( self, category ):
     if not self._outputView.WindowIsValid():
@@ -503,7 +527,7 @@ class DebugSession( object ):
       # and poking into each View class to check its window is valid also feels
       # wrong.
       with utils.LetCurrentTabpage( self._uiTab ):
-        vim.command( f'botright { settings.Int( "bottombar_height", 10 ) }new' )
+        vim.command( f'botright { settings.Int( "bottombar_height" ) }new' )
         self._outputView.UseWindow( vim.current.window )
         vim.vars[ 'vimspector_session_windows' ][ 'output' ] = utils.WindowID(
           vim.current.window,
@@ -532,8 +556,7 @@ class DebugSession( object ):
     # TODO:
     #  - start / length
     #  - sortText
-    return [ i.get( 'text' ) or i[ 'label' ]
-             for i in response[ 'body' ][ 'targets' ] ]
+    return response[ 'body' ][ 'targets' ]
 
 
   def _SetUpUI( self ):
@@ -546,7 +569,7 @@ class DebugSession( object ):
 
     # Call stack
     vim.command(
-      f'topleft vertical { settings.Int( "sidebar_width", 50 ) }new' )
+      f'topleft vertical { settings.Int( "sidebar_width" ) }new' )
     stack_trace_window = vim.current.window
     one_third = int( vim.eval( 'winheight( 0 )' ) ) / 3
     self._stackTraceView = stack_trace.StackTraceView( self,
@@ -572,7 +595,7 @@ class DebugSession( object ):
 
     # Output/logging
     vim.current.window = code_window
-    vim.command( f'rightbelow { settings.Int( "bottombar_height", 10 ) }new' )
+    vim.command( f'rightbelow { settings.Int( "bottombar_height" ) }new' )
     output_window = vim.current.window
     self._outputView = output.DAPOutputView( output_window,
                                              self._api_prefix )
@@ -921,13 +944,26 @@ class DebugSession( object ):
     if 'name' not in launch_config:
       launch_config[ 'name' ] = 'test'
 
+    def failure_handler( reason, msg ):
+      text = [
+        'Launch Failed',
+        '',
+        reason,
+        '',
+        'Use :VimspectorReset to close'
+      ]
+      self._splash_screen = utils.DisplaySplash( self._api_prefix,
+                                                 self._splash_screen,
+                                                 text )
+
+
     self._connection.DoRequest(
       lambda msg: self._OnLaunchComplete(),
       {
         'command': launch_config[ 'request' ],
         'arguments': launch_config
-      }
-    )
+      },
+      failure_handler )
 
 
   def _OnLaunchComplete( self ):
