@@ -1,4 +1,5 @@
 function! SetUp()
+  set ambiwidth=double
   call vimspector#test#setup#SetUpWithMappings( v:none )
 endfunction
 

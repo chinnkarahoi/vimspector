@@ -18,7 +18,7 @@ import logging
 import json
 from collections import defaultdict
 
-from vimspector import utils, settings, signs
+from vimspector import utils, terminal, signs
 
 from vimspector import global_filetype
 
@@ -27,8 +27,7 @@ class CodeView( object ):
     self._window = window
     self._api_prefix = api_prefix
 
-    self._terminal_window = None
-    self._terminal_buffer_number = None
+    self._terminal = None
     self.current_syntax = None
 
     self._logger = logging.getLogger( __name__ )
@@ -40,6 +39,7 @@ class CodeView( object ):
       'vimspectorPC': None,
       'breakpoints': []
     }
+    self._current_frame = None
 
     with utils.LetCurrentWindow( self._window ):
       # vim.command( 'nnoremenu WinBar.■\\ Stop :call vimspector#Stop()<CR>' )
@@ -54,8 +54,56 @@ class CodeView( object ):
       if not signs.SignDefined( 'vimspectorPC' ):
         signs.DefineSign( 'vimspectorPC',
                           text = '▶',
+                          double_text = '▶',
                           texthl = 'MatchParen',
                           linehl = 'CursorLine' )
+      if not signs.SignDefined( 'vimspectorPCBP' ):
+        signs.DefineSign( 'vimspectorPCBP',
+                          text = '●▶',
+                          double_text  = '▷',
+                          texthl = 'MatchParen',
+                          linehl = 'CursorLine' )
+
+
+  def _UndisplayPC( self, clear_pc = True ):
+    if clear_pc:
+      self._current_frame = None
+    if self._signs[ 'vimspectorPC' ]:
+      signs.UnplaceSign( self._signs[ 'vimspectorPC' ], 'VimspectorCode' )
+      self._signs[ 'vimspectorPC' ] = None
+
+
+  def _DisplayPC( self ):
+    frame = self._current_frame
+    if not frame:
+      return
+
+    self._UndisplayPC( clear_pc = False )
+
+    # FIXME: Do we relly need to keep using up IDs ?
+    self._signs[ 'vimspectorPC' ] = self._next_sign_id
+    self._next_sign_id += 1
+
+    sign = 'vimspectorPC'
+    # If there's also a breakpoint on this line, use vimspectorPCBP
+    for bp in self._breakpoints.get( frame[ 'source' ][ 'path' ], [] ):
+      if 'line' not in bp:
+        continue
+
+      if bp[ 'line' ] == frame[ 'line' ]:
+        sign = 'vimspectorPCBP'
+        break
+
+    try:
+      signs.PlaceSign( self._signs[ 'vimspectorPC' ],
+                       'VimspectorCode',
+                       sign,
+                       frame[ 'source' ][ 'path' ],
+                       frame[ 'line' ] )
+    except vim.error as e:
+      # Ignore 'invalid buffer name'
+      if 'E158' not in str( e ):
+        raise
 
 
   def SetCurrentFrame( self, frame ):
@@ -63,29 +111,16 @@ class CodeView( object ):
     otherwise. False means either the frame is junk, we couldn't find the file
     (or don't have the data) or the code window no longer exits."""
 
-    if self._signs[ 'vimspectorPC' ]:
-      signs.UnplaceSign( self._signs[ 'vimspectorPC' ], 'VimspectorCode' )
-      self._signs[ 'vimspectorPC' ] = None
-
     if not frame or not frame.get( 'source' ):
+      self._UndisplayPC()
       return False
 
     if 'path' not in frame[ 'source' ]:
+      self._UndisplayPC()
       return False
 
-    self._signs[ 'vimspectorPC' ] = self._next_sign_id
-    self._next_sign_id += 1
-
-    try:
-      signs.PlaceSign( self._signs[ 'vimspectorPC' ],
-                       'VimspectorCode',
-                       'vimspectorPC',
-                       frame[ 'source' ][ 'path' ],
-                       frame[ 'line' ] )
-    except vim.error as e:
-      # Ignore 'invalid buffer name'
-      if 'E158' not in str( e ):
-        raise
+    self._current_frame = frame
+    self._DisplayPC()
 
     if not self._window.valid:
       return False
@@ -122,6 +157,7 @@ class CodeView( object ):
       signs.UnplaceSign( self._signs[ 'vimspectorPC' ], 'VimspectorCode' )
       self._signs[ 'vimspectorPC' ] = None
 
+    self._UndisplayPC()
     self._UndisplaySigns()
     self.current_syntax = None
 
@@ -189,6 +225,9 @@ class CodeView( object ):
                          file_name,
                          breakpoint[ 'line' ] )
 
+    # We need to also check if there's a breakpoint on this PC line and chnge
+    # the PC
+    self._DisplayPC()
 
   def BreakpointsAsQuickFix( self ):
     qf = []
@@ -207,75 +246,11 @@ class CodeView( object ):
 
 
   def LaunchTerminal( self, params ):
-    # kind = params.get( 'kind', 'integrated' )
+    self._terminal = terminal.LaunchTerminal( self._api_prefix,
+                                              params,
+                                              window_for_start = self._window,
+                                              existing_term = self._terminal )
 
-    # FIXME: We don't support external terminals, and only open in the
-    # integrated one.
-
-    cwd = params[ 'cwd' ]
-    args = params[ 'args' ]
-    env = params.get( 'env', {} )
-
-    term_options = {
-      'vertical': 1,
-      'norestore': 1,
-      'cwd': cwd,
-      'env': env,
-    }
-
-    if self._window.valid:
-      window_for_start = self._window
-    else:
-      # TOOD: Where? Maybe we should just use botright vertical ...
-      window_for_start = vim.current.window
-
-    if self._terminal_window is not None and self._terminal_window.valid:
-      assert self._terminal_buffer_number
-      window_for_start = self._terminal_window
-      if ( self._terminal_window.buffer.number == self._terminal_buffer_number
-           and int( utils.Call( 'vimspector#internal#{}term#IsFinished'.format(
-                                  self._api_prefix ),
-                                self._terminal_buffer_number ) ) ):
-        term_options[ 'curwin' ] = 1
-      else:
-        term_options[ 'vertical' ] = 0
-
-    buffer_number = None
-    terminal_window = None
-    with utils.LetCurrentWindow( window_for_start ):
-      # If we're making a vertical split from the code window, make it no more
-      # than 80 columns and no fewer than 10. Also try and keep the code window
-      # at least 82 columns
-      if term_options[ 'vertical' ] and not term_options.get( 'curwin', 0 ):
-        term_options[ 'term_cols' ] = max(
-          min ( int( vim.eval( 'winwidth( 0 )' ) )
-                     - settings.Int( 'code_minwidth' ),
-                settings.Int( 'terminal_maxwidth' ) ),
-          settings.Int( 'terminal_minwidth' )
-        )
-
-      buffer_number = int(
-        utils.Call(
-          'vimspector#internal#{}term#Start'.format( self._api_prefix ),
-          args,
-          term_options ) )
-      terminal_window = vim.current.window
-
-    if buffer_number is None or buffer_number <= 0:
-      # TODO: Do something better like reject the request?
-      raise ValueError( "Unable to start terminal" )
-
-    self._terminal_window = terminal_window
-    self._terminal_buffer_number = buffer_number
-    # vim.command( 'silent! call setbufvar({}, "&filetype", "{}")'
-    #    .format( buffer_number, global_filetype.GLOBAL_FILETYPE  ) )
-
-    vim.vars[ 'vimspector_session_windows' ][ 'terminal' ] = utils.WindowID(
-      self._terminal_window,
-      vim.current.tabpage )
-    with utils.RestoreCursorPosition():
-      with utils.RestoreCurrentWindow():
-        with utils.RestoreCurrentBuffer( vim.current.window ):
-          vim.command( 'doautocmd User VimspectorTerminalOpened' )
-
-    return buffer_number
+    # FIXME: Change this tor return the PID rather than having debug_session
+    # work that out
+    return self._terminal.buffer_number
