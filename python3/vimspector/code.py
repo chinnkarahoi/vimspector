@@ -120,7 +120,6 @@ class CodeView( object ):
       return False
 
     self._current_frame = frame
-    self._DisplayPC()
 
     if not self._window.valid:
       return False
@@ -149,6 +148,8 @@ class CodeView( object ):
     self.current_syntax = utils.ToUnicode(
       vim.current.buffer.options[ 'syntax' ] )
     self.filetype = '.'.join(utils.GetBufferFiletypes( vim.current.buffer ))
+
+    self.ShowBreakpoints()
 
     return True
 
