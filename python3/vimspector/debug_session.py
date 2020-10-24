@@ -78,6 +78,7 @@ class DebugSession( object ):
     self._launch_complete = False
     self._on_init_complete_handlers = []
     self._server_capabilities = {}
+    self.ClearTemporaryBreakpoints()
 
   def Start( self, launch_variables = None ):
     # We mutate launch_variables, so don't mutate the default argument.
@@ -562,6 +563,13 @@ class DebugSession( object ):
     return response[ 'body' ][ 'targets' ]
 
 
+  def RefreshSigns( self, file_name ):
+    if self._connection:
+      self._codeView.Refresh( file_name )
+    else:
+      self._breakpoints.Refresh( file_name )
+
+
   def _SetUpUI( self ):
     vim.command( 'tab split' )
     self._uiTab = vim.current.tabpage
@@ -624,7 +632,7 @@ class DebugSession( object ):
     self.SetCurrentFrame( None )
 
   @RequiresUI()
-  def SetCurrentFrame( self, frame ):
+  def SetCurrentFrame( self, frame, reason = '' ):
     if not frame:
       self._stackTraceView.Clear()
       self._variablesView.Clear()
@@ -632,14 +640,16 @@ class DebugSession( object ):
     if not self._codeView.SetCurrentFrame( frame ):
       return False
 
-    if frame:
-      # self._variablesView.SetSyntax( self._codeView.current_syntax )
-      self._variablesView.SetFiletype( self._codeView.filetype )
-      # self._stackTraceView.SetSyntax( self._codeView.current_syntax )
-      self._stackTraceView.SetFiletype( self._codeView.filetype )
-      self._variablesView.LoadScopes( frame )
-      self._variablesView.EvaluateWatches()
+    # the codeView.SetCurrentFrame already checked the frame was valid and
+    # countained a valid source
+    self._variablesView.SetFiletype( self._codeView.filetype )
+    self._stackTraceView.SetFiletype( self._codeView.filetype )
+    self._variablesView.LoadScopes( frame )
+    self._variablesView.EvaluateWatches()
 
+    if reason == 'stopped':
+      self._breakpoints.ClearTemporaryBreakpoint( frame[ 'source' ][ 'path' ],
+                                                  frame[ 'line' ] )
     return True
 
   def _StartDebugAdapter( self ):
@@ -1168,6 +1178,26 @@ class DebugSession( object ):
 
   def ToggleBreakpoint( self, options ):
     return self._breakpoints.ToggleBreakpoint( options )
+
+  def RunTo( self, file_name, line ):
+    self.ClearTemporaryBreakpoints()
+    self.SetLineBreakpoint( file_name,
+                            line,
+                            { 'temporary': True },
+                            lambda: self.Continue() )
+
+
+  def ClearTemporaryBreakpoints( self ):
+    return self._breakpoints.ClearTemporaryBreakpoints()
+
+  def SetLineBreakpoint( self, file_name, line_num, options, then = None ):
+    return self._breakpoints.SetLineBreakpoint( file_name,
+                                                line_num,
+                                                options,
+                                                then )
+
+  def ClearLineBreakpoint( self, file_name, line_num ):
+    return self._breakpoints.ClearLineBreakpoint( file_name, line_num )
 
   def ClearBreakpoints( self ):
     if self._connection:
