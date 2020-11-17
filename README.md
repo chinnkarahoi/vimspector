@@ -64,6 +64,7 @@ For a tutorial and usage overview, take a look at the
     * [Java](#java)
        * [Usage with YouCompleteMe](#usage-with-youcompleteme)
        * [Other LSP clients](#other-lsp-clients)
+    * [Lua](#lua)
     * [Rust](#rust)
     * [Other servers](#other-servers)
  * [Customisation](#customisation)
@@ -132,20 +133,21 @@ runtime dependencies). They are categorised by their level of support:
 * `Experimental`: Working, but not frequently used and rarely tested
 * `Legacy`: No longer supported, please migrate your config
 
-| Language         | Status       | Switch (for `install_gadget.py`) | Adapter (for `:VimspectorInstall`) | Dependencies                               |
-|------------------|--------------|----------------------------------|------------------------------------|--------------------------------------------|
-| C, C++, etc.     | Tested       | `--all` or `--enable-c`          | vscode-cpptools                    | mono-core                                  |
-| Python           | Tested       | `--all` or `--enable-python`     | debugpy                            | Python 2.7 or Python 3                     |
-| Go               | Tested       | `--enable-go`                    | vscode-go                          | Go, [Delve][]                              |
-| TCL              | Supported    | `--all` or `--enable-tcl`        | tclpro                             | TCL 8.5                                    |
-| Bourne Shell     | Supported    | `--all` or `--enable-bash`       | vscode-bash-debug                  | Bash v??                                   |
-| Node.js          | Supported    | `--force-enable-node`            | vscode-node-debug2                 | 6 < Node < 12, Npm                         |
-| Javascript       | Supported    | `--force-enable-chrome`          | debugger-for-chrome                | Chrome                                     |
-| Java             | Supported    | `--force-enable-java  `          | vscode-java-debug                  | Compatible LSP plugin (see [later](#java)) |
-| C# (dotnet core) | Experimental | `--force-enable-csharp`          | netcoredbg                         | DotNet core                                |
-| C# (mono)        | Experimental | `--force-enable-csharp`          | vscode-mono-debug                  | Mono                                       |
-| Rust (CodeLLDB)  | Experimental | `--force-enable-rust`            | CodeLLDB                           | Python 3                                   |
-| Python.legacy    | Legacy       | `--force-enable-python.legacy`   | vscode-python                      | Node 10, Python 2.7 or Python 3            |
+| Language           | Status       | Switch (for `install_gadget.py`) | Adapter (for `:VimspectorInstall`) | Dependencies                               |
+|--------------------|--------------|----------------------------------|------------------------------------|--------------------------------------------|
+| C, C++, etc.       | Tested       | `--all` or `--enable-c`          | vscode-cpptools                    | mono-core                                  |
+| Rust, C, C++, etc. | Supported    | `--force-enable-rust`            | CodeLLDB                           | Python 3                                   |
+| Python             | Tested       | `--all` or `--enable-python`     | debugpy                            | Python 2.7 or Python 3                     |
+| Go                 | Tested       | `--enable-go`                    | vscode-go                          | Go, [Delve][]                              |
+| TCL                | Supported    | `--all` or `--enable-tcl`        | tclpro                             | TCL 8.5                                    |
+| Bourne Shell       | Supported    | `--all` or `--enable-bash`       | vscode-bash-debug                  | Bash v??                                   |
+| Lua                | Supported    | `--all` or `--enable-lua`        | local-lua-debugger-vscode          | Node >=12.13.0, Npm, Lua interpreter       |
+| Node.js            | Supported    | `--force-enable-node`            | vscode-node-debug2                 | 6 < Node < 12, Npm                         |
+| Javascript         | Supported    | `--force-enable-chrome`          | debugger-for-chrome                | Chrome                                     |
+| Java               | Supported    | `--force-enable-java  `          | vscode-java-debug                  | Compatible LSP plugin (see [later](#java)) |
+| C# (dotnet core)   | Experimental | `--force-enable-csharp`          | netcoredbg                         | DotNet core                                |
+| C# (mono)          | Experimental | `--force-enable-csharp`          | vscode-mono-debug                  | Mono                                       |
+| Python.legacy      | Legacy       | `--force-enable-python.legacy`   | vscode-python                      | Node 10, Python 2.7 or Python 3            |
 
 ## Other languages
 
@@ -351,7 +353,7 @@ of adapters just installed, whereas `:VimspectorInstall` will _update_ it,
 overwriting only newly changed or installed adapters.
 
 If you want to just add a new adapter using the script without destroying the
-exisitng ones, add `--update-gadget-config`, as in:
+existing ones, add `--update-gadget-config`, as in:
 
 ```bash
 $ ./install_gadget.py --enable-tcl
@@ -671,6 +673,16 @@ Vimspector uses the following logic to choose a configuration to launch:
 
 See [the reference guide][vimspector-ref-config-selection] for details.
 
+
+### Get configurations
+
+* Use `vimspector#GetConfigurations()` to get a list of configurations
+
+For example, to get an array of configurations and fuzzy matching on the result
+```viml
+:call matchfuzzy(vimspector#GetConfigurations(), "test::case_1")
+```
+
 ## Breakpoints
 
 * Use `vimspector#ToggleBreakpoint([ { 'condition': '<condition expr>' } ])`
@@ -859,7 +871,10 @@ Current tested with the following debug adapters.
 
 ## C, C++, Rust, etc.
 
-* C++: [vscode-cpptools](https://github.com/Microsoft/vscode-cpptools)
+* [vscode-cpptools](https://github.com/Microsoft/vscode-cpptools)
+* On macOS, I *strongly* recommend using [CodeLLDB](#rust) instead for C and C++
+projects. It's really excellent, has fewer dependencies and doesn't open console
+apps in another Terminal window.
 
 
 Example `.vimspector.json` (works with both `vscode-cpptools` and `lldb-vscode`.
@@ -916,6 +931,12 @@ licensing.
 }
 ```
 
+* CodeLLDB (MacOS)
+
+CodeLLDB is superior to vscode-cpptools in a number of ways on macOS at least.
+
+See [Rust](#rust).
+
 * lldb-vscode (MacOS)
 
 An alternative is to to use `lldb-vscode`, which comes with llvm.  Here's how:
@@ -948,6 +969,33 @@ An alternative is to to use `lldb-vscode`, which comes with llvm.  Here's how:
   }
 }
 ```
+
+## Rust
+
+Rust is supported with any gdb/lldb-based debugger. So it works fine with
+`vscode-cpptools` and `lldb-vscode` above. However, support for rust is best in
+[`CodeLLDB`](https://github.com/vadimcn/vscode-lldb#features).
+
+* `./install_gadget.py --force-enable-rust` or `:VimspectorInstall CodeLLDB`
+* Example: `support/test/rust/vimspector_test`
+
+```json
+{
+  "configurations": {
+    "launch": {
+      "adapter": "CodeLLDB",
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceRoot}/target/debug/vimspector_test"
+      }
+    }
+  }
+}
+```
+
+* Docs: https://github.com/vadimcn/vscode-lldb/blob/master/MANUAL.md
+
+
 
 ### Remote debugging
 
@@ -1088,7 +1136,8 @@ netcoredbg`
         "request": "launch",
         "program": "${workspaceRoot}/bin/Debug/netcoreapp2.2/csharp.dll",
         "args": [],
-        "stopAtEntry": true
+        "stopAtEntry": true,
+        "cwd": "${workspaceRoot}"
       }
     }
   }
@@ -1262,7 +1311,7 @@ https://marketplace.visualstudio.com/items?itemName=msjsdiag.debugger-for-chrome
 
 It allows you to debug scripts running inside chrome from within Vim.
 
-* `./install_gadget.py --force-enable-chrome` or `:VimspectorInstall 
+* `./install_gadget.py --force-enable-chrome` or `:VimspectorInstall
   debugger-for-chrome`
 * Example: `support/test/chrome`
 
@@ -1298,7 +1347,7 @@ use it with Vimspector.
 * Set up [YCM for java][YcmJava].
 * Get Vimspector to download the java debug plugin:
    `install_gadget.py --force-enable-java <other options...>` or
-   `:VimspectorInstall java-debug-adapter` 
+   `:VimspectorInstall java-debug-adapter`
 * Configure Vimspector for your project using the `vscode-java` adapter, e.g.:
 
 ```json
@@ -1363,31 +1412,59 @@ For the launch arguments, see the
 See [this issue](https://github.com/puremourning/vimspector/issues/3) for more
 background.
 
-## Rust
+## Lua
 
-Rust is supported with any gdb/lldb-based debugger. So it works fine with
-`vscode-cpptools` and `lldb-vscode` above. However, support for rust is best in
-[`CodeLLDB`](https://github.com/vadimcn/vscode-lldb#features).
+Lua is supported through
+[local-lua-debugger-vscode](https://github.com/tomblind/local-lua-debugger-vscode).
+This debugger uses stdio to communicate with the running process, so calls to
+`io.read` will cause problems.
 
-* `./install_gadget.py --force-enable-rust` or `:VimspectorInstall CodeLLDB`
-* Example: `support/test/rust/vimspector_test`
+* `./install_gadget.py --enable-lua` or `:VimspectorInstall local-lua-debugger-vscode`
+* Examples: `support/test/lua/simple` and `support/test/lua/love`
 
 ```json
 {
+  "$schema": "https://puremourning.github.io/vimspector/schema/vimspector.schema.json#",
   "configurations": {
-    "launch": {
-      "adapter": "CodeLLDB",
+    "lua": {
+      "adapter": "lua-local",
       "configuration": {
         "request": "launch",
-        "program": "${workspaceRoot}/target/debug/vimspector_test"
+        "type": "lua-local",
+        "cwd": "${workspaceFolder}",
+        "program": {
+          "lua": "lua",
+          "file": "${file}"
+        }
+      }
+    },
+    "luajit": {
+      "adapter": "lua-local",
+      "configuration": {
+        "request": "launch",
+        "type": "lua-local",
+        "cwd": "${workspaceFolder}",
+        "program": {
+          "lua": "luajit",
+          "file": "${file}"
+        }
+      }
+    },
+    "love": {
+      "adapter": "lua-local",
+      "configuration": {
+        "request": "launch",
+        "type": "lua-local",
+        "cwd": "${workspaceFolder}",
+        "program": {
+          "command": "love"
+        },
+        "args": ["${workspaceFolder}"]
       }
     }
   }
 }
 ```
-
-* Docs: https://github.com/vadimcn/vscode-lldb/blob/master/MANUAL.md
-
 
 ## Other servers
 
@@ -1664,7 +1741,7 @@ augroup END
    comment](https://github.com/puremourning/vimspector/issues/90#issuecomment-577857322)
 4. Can I specify answers to the annoying questions about exception breakpoints
    in my `.vimspector.json` ? Yes, see [here][vimspector-ref-exception].
-5. Do I have to specify the file to execute in `.vimspector.json`, or could it be the current vim file? 
+5. Do I have to specify the file to execute in `.vimspector.json`, or could it be the current vim file?
    You don't need to. You can specify $file for the current active file. See [here][vimspector-ref-var] for complete list of replacements in the configuration file.
 6. You allow comments in `.vimspector.json`, but Vim highlights these as errors,
    do you know how to make this not-an-error? Yes, put this in
@@ -1712,7 +1789,7 @@ A message from the author about the motivation for this plugin:
 >
 > I created Vimspector because I find changing tools frustrating. `gdb` for c++,
 > `pdb` for python, etc. Each has its own syntax. Each its own lexicon. Each its
-> own foibles. 
+> own foibles.
 >
 > I designed the configuration system in such a way that the configuration can
 > be committed to source control so that it _just works_ for any of your
